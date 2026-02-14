@@ -9,3 +9,6 @@ alter table public.new_agents force row level security;
 
 alter table public.new_unified_agents enable row level security;
 alter table public.new_unified_agents force row level security;
+
+alter table public.unified_merge_logs enable row level security;
+alter table public.unified_merge_logs force row level security;
