@@ -37,7 +37,7 @@ begin
                 when lower(ucm.member_name) = lower(na.full_name)
                      and ucm.team_id = na.team_id then 80
                 when similarity(ucm.member_name, na.full_name) > 0.8
-                     and ucm.team_id = na.team_id then 65
+                     and ucm.team_id = na.team_id then 60
                 else null
             end as confidence_score
 
@@ -85,7 +85,7 @@ begin
             ) as phone_numbers,
             bm.team_id as source_team_id,
             bm.confidence_score,
-            (bm.confidence_score < 70) as needs_review,
+            (bm.confidence_score <= 60) as needs_review,
             bm.ucm_id
         from best_matches bm
 
@@ -148,7 +148,7 @@ begin
                 when greatest(
                     new_unified_agents.confidence_score,
                     excluded.confidence_score
-                ) >= 70 then false
+                ) > 60 then false
                 else true
             end,
             last_updated = now()
@@ -163,16 +163,5 @@ begin
 
 end;
 $$;
-
-
-
-truncate table public.new_unified_agents;
-
-update public.unified_company_member
-set processed = false;
-
-select public.run_unified_merge_batch();
-
-SELECT * FROM public.new_unified_agents;
 
 
