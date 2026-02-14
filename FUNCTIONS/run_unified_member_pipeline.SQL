@@ -15,7 +15,7 @@ begin
         phone_normalized,
         member_designation,
         record_hash,
-        source_position,
+        source_position
     )
     with flattened as (
         select
@@ -25,7 +25,7 @@ begin
             lower(split_part(r.website, '/', 1)) as domain,
             m,
             ordinality as source_position
-        from public.company_info_raw r
+        from bronze.company_info_raw r
         cross join lateral jsonb_array_elements(r.team_members)
         with ordinality as t(m, ordinality)
         where r.team_members is not null
