@@ -1,9 +1,33 @@
+create table if not exists public.unified_merge_logs (
+    id bigserial primary key,
+    started_at timestamptz not null default now(),
+    finished_at timestamptz,
+    total_processed int,
+    status text not null,
+    error_message text
+);
+
+
 create or replace function public.run_unified_merge_batch()
 returns void
 language plpgsql
 security definer
 as $$
+declare
+    v_log_id bigint;
+    v_processed_count int;
 begin
+
+    -- Create log entry
+    insert into public.unified_merge_logs(status)
+    values ('running')
+    returning id into v_log_id;
+
+    RAISE NOTICE 'Merge batch started. Log ID: %', v_log_id;
+
+    ------------------------------------------------------------------
+    -- YOUR ORIGINAL LOGIC (UNCHANGED)
+    ------------------------------------------------------------------
 
     with ucm_source as (
         select *
@@ -161,7 +185,31 @@ begin
         select ucm_id from final_dedup
     );
 
+    -- Capture how many rows were marked processed
+    GET DIAGNOSTICS v_processed_count = ROW_COUNT;
+
+    ------------------------------------------------------------------
+    -- UPDATE LOG SUCCESS
+    ------------------------------------------------------------------
+
+    update public.unified_merge_logs
+    set finished_at = now(),
+        total_processed = v_processed_count,
+        status = 'completed'
+    where id = v_log_id;
+
+    RAISE NOTICE 'Merge batch completed. Processed rows: %', v_processed_count;
+
+exception
+    when others then
+        update public.unified_merge_logs
+        set finished_at = now(),
+            status = 'failed',
+            error_message = SQLERRM
+        where id = v_log_id;
+
+        RAISE NOTICE 'Merge batch failed: %', SQLERRM;
+        raise;
 end;
 $$;
-
 
